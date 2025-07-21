@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poetry Publisher</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&display=swap');
+        body {
+            font-family: 'Lora', serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4">
+        <div class="flex justify-between items-center mb-4">
+            <h1 class="text-3xl font-bold">Poetry Publisher</h1>
+            <div>
+                <button id="publish-btn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    Publish All & Get Link
+                </button>
+                <label for="upload-poem" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded cursor-pointer">
+                    Upload Poem (.txt)
+                </label>
+                <input type="file" id="upload-poem" class="hidden" accept=".txt">
+            </div>
+        </div>
+        <div id="poems-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            </div>
+    </div>
+
+    <script>
+        const poemsContainer = document.getElementById('poems-container');
+        const uploadPoemInput = document.getElementById('upload-poem');
+        const publishBtn = document.getElementById('publish-btn');
+        let poems = [];
+
+        // Load poems from local storage
+        const storedPoems = localStorage.getItem('poems');
+        if (storedPoems) {
+            poems = JSON.parse(storedPoems);
+            renderPoems();
+        }
+
+        uploadPoemInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const newPoem = {
+                        id: Date.now(),
+                        title: file.name.replace('.txt', ''),
+                        text: e.target.result
+                    };
+                    poems.push(newPoem);
+                    savePoems();
+                    renderPoems();
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        publishBtn.addEventListener('click', () => {
+            const portfolioId = 'user123'; // In a real app, this would be a unique user ID
+            const portfolioUrl = `${window.location.origin}${window.location.pathname}?portfolio=${portfolioId}`;
+            localStorage.setItem(`portfolio-${portfolioId}`, JSON.stringify(poems));
+            navigator.clipboard.writeText(portfolioUrl).then(() => {
+                alert('Portfolio link copied to clipboard!');
+            });
+        });
+
+        function renderPoems() {
+            poemsContainer.innerHTML = '';
+            poems.forEach(poem => {
+                const poemCard = document.createElement('div');
+                poemCard.className = 'bg-white p-4 rounded shadow';
+                poemCard.innerHTML = `
+                    <h2 class="text-xl font-bold mb-2">${poem.title}</h2>
+                    <textarea class="w-full h-48 p-2 border rounded mb-2">${poem.text}</textarea>
+                    <div class="flex justify-end">
+                        <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-3 rounded mr-2" onclick="savePoem(${poem.id})">Save</button>
+                        <button class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded" onclick="deletePoem(${poem.id})">Delete</button>
+                    </div>
+                `;
+                poemsContainer.appendChild(poemCard);
+            });
+        }
+
+        function savePoem(id) {
+            const poemIndex = poems.findIndex(p => p.id === id);
+            if (poemIndex > -1) {
+                const poemCard = poemsContainer.children[poemIndex];
+                const textarea = poemCard.querySelector('textarea');
+                poems[poemIndex].text = textarea.value;
+                savePoems();
+                alert('Poem saved!');
+            }
+        }
+
+        function deletePoem(id) {
+            if (confirm('Are you sure you want to delete this poem?')) {
+                poems = poems.filter(p => p.id !== id);
+                savePoems();
+                renderPoems();
+            }
+        }
+
+        function savePoems() {
+            localStorage.setItem('poems', JSON.stringify(poems));
+        }
+
+        // Handle portfolio view
+        const urlParams = new URLSearchParams(window.location.search);
+        const portfolioId = urlParams.get('portfolio');
+        if (portfolioId) {
+            const portfolioPoems = JSON.parse(localStorage.getItem(`portfolio-${portfolioId}`));
+            if (portfolioPoems) {
+                document.title = "words I've walked through worlds with";
+                document.body.innerHTML = `
+                    <div class="container mx-auto p-4">
+                        <h1 class="text-4xl font-bold text-center my-8">words I've walked through worlds with</h1>
+                        <div id="portfolio-list" class="space-y-4"></div>
+                    </div>
+                `;
+                const portfolioList = document.getElementById('portfolio-list');
+                const poemId = urlParams.get('poem');
+                if (poemId) {
+                    const poem = portfolioPoems.find(p => p.id == poemId);
+                    if (poem) {
+                        portfolioList.innerHTML = `
+                            <div class="bg-white p-8 rounded shadow">
+                                <h2 class="text-3xl font-bold mb-4">${poem.title}</h2>
+                                <pre class="whitespace-pre-wrap">${poem.text}</pre>
+                                <a href="?portfolio=${portfolioId}" class="text-blue-500 hover:underline mt-4 inline-block">&larr; Back to List</a>
+                            </div>
+                        `;
+                    }
+                } else {
+                    portfolioList.innerHTML = portfolioPoems.map(poem => `
+                        <a href="?portfolio=${portfolioId}&poem=${poem.id}" class="block bg-white p-4 rounded shadow hover:bg-gray-50">
+                            <h2 class="text-2xl font-bold">${poem.title}</h2>
+                        </a>
+                    `).join('');
+                }
+            }
+        }
+    </script>
+</body>
+</html>
