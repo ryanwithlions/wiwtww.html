@@ -1,4 +1,4 @@
-# wiwtww.html
+# index.html
 words i've walked through worlds with - A Poetry Portfolio
 
 This is a personal portfolio showcasing my poetry.
